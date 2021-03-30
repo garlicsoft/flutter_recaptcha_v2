@@ -10,7 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^2.0.2
+  webview_flutter:
+    git:
+      url: git@github.com:garlicsoft/flutter-plugins.git
+      path: packages/webview_flutter
   http: ^0.13.1
 
 dev_dependencies:
