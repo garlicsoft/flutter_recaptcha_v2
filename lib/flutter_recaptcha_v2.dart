@@ -3,15 +3,82 @@ library flutter_recaptcha_v2;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:sprintf/sprintf.dart';
+
+enum RecaptchaPluginType {
+  defaultPlugin,
+  alternatePlugin,
+}
 
 class RecaptchaV2 extends StatefulWidget {
   final String apiKey;
-  final String pluginURL = "https://recaptcha-flutter-plugin.firebaseapp.com/";
+  final String baseURL;
+  final RecaptchaPluginType type;
   final RecaptchaV2Controller controller;
   final ValueChanged<String> onResponse;
+  final String htmlContent = '''
+<!doctype html>
+<html class=\"no-js\" lang=\"\">
+
+<head>
+  <meta charset=\"utf-8\">
+  <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\">
+  <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />
+  <meta http-equiv=\"content-language\" content=\"en\" />
+  <!-- SEO -->
+  <title>RECAPTCHA - FLUTTER PLUGIN</title>
+  <meta name=\"description\" content=\"A Flutter plugin for Google ReCaptcha\">
+  <meta name=\"keywords\" content=\"flutter, recaptcha, plugin, captcha\">
+  <meta name=\"author\" content=\"http://wearetopgroup.com\">
+  <!-- Social Sharing Info -->
+  <meta property=\"og:url\" content=\"\" />
+  <meta property=\"og:title\" content=\"RECAPTCHA - FLUTTER PLUGIN\" />
+  <meta property=\"og:description\" content=\"A Flutter plugin for Google ReCaptcha\" />
+  <meta property=\"og:image\" content=\".../assets/images/share.jpg\" />
+  <meta property=\"og:image:width\" content=\"1200\" /> <!-- Full HD: WIDTH -->
+  <meta property=\"og:image:height\" content=\"630\" /> <!-- Full HD: HEIGHT -->
+  <!-- Viewport and mobile -->
+  <meta name=\"viewport\"
+    content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0\">
+  <!-- FAVICON -->
+  <link rel=\"image_src\" href=\"./images/favicon.ico\" />
+  <link rel=\"icon\" type=\"image/gif\" href=\"./images/favicon.ico\" />
+  <script src=\"%s\" async defer>
+  </script>
+</head>
+<body>
+  <div id=\"html_element\"></div>
+  <script type=\"text/javascript\">
+    var onloadCallback = function () {
+      console.log(\"grecaptcha is ready!\");
+      grecaptcha.render(\'html_element\', {
+        \'sitekey\': \"%s\",
+        \'callback\': verifyCallback
+      });
+    };
+    function verifyCallback(token) {
+      console.log(token);
+      // console.log(grecaptcha.getResponse());
+      try {
+        RecaptchaFlutterChannel.postMessage(token);
+      } catch (e) {
+        console.log(\"Something wrong...\");
+      }
+    }
+  </script>
+</body>
+</html>
+  ''';
+
+  String defaultPluginURL =
+      "https://www.google.com/recaptcha/api.js?onload=onloadCallback&render=explicit";
+  String alternatePluginURL =
+      "https://www.recaptcha.net/recaptcha/api.js?onload=onloadCallback&render=explicit";
 
   RecaptchaV2({
     this.apiKey,
+    this.baseURL,
+    this.type,
     RecaptchaV2Controller controller,
     this.onResponse,
   })  : controller = controller ?? RecaptchaV2Controller(),
@@ -63,11 +130,16 @@ class _RecaptchaV2State extends State<RecaptchaV2> {
 
   @override
   Widget build(BuildContext context) {
+    String pluginURL = widget.type == RecaptchaPluginType.defaultPlugin
+        ? widget.defaultPluginURL
+        : widget.alternatePluginURL;
     return controller.visible
         ? Stack(
             children: <Widget>[
               WebView(
-                initialUrl: "${widget.pluginURL}?api_key=${widget.apiKey}",
+                initialUrl: "${widget.baseURL}",
+                htmlContent:
+                    sprintf(widget.htmlContent, [pluginURL, widget.apiKey]),
                 javascriptMode: JavascriptMode.unrestricted,
                 javascriptChannels: <JavascriptChannel>[
                   JavascriptChannel(
