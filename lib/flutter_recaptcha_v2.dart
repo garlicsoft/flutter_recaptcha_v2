@@ -2,8 +2,8 @@ library flutter_recaptcha_v2;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:sprintf/sprintf.dart';
+import 'package:webviewx/webviewx.dart';
 
 enum RecaptchaPluginType {
   defaultPlugin,
@@ -90,12 +90,11 @@ class RecaptchaV2 extends StatefulWidget {
 
 class _RecaptchaV2State extends State<RecaptchaV2> {
   RecaptchaV2Controller controller;
-  WebViewController webViewController;
+  WebViewXController webViewController;
 
   void onListen() {
     if (controller.visible) {
       if (webViewController != null) {
-        webViewController.clearCache();
         webViewController.reload();
       }
     }
@@ -136,24 +135,21 @@ class _RecaptchaV2State extends State<RecaptchaV2> {
     return controller.visible
         ? Stack(
             children: <Widget>[
-              WebView(
-                initialUrl: "${widget.baseURL}",
-                htmlContent:
+              WebViewX(
+                initialContent:
                     sprintf(widget.htmlContent, [pluginURL, widget.apiKey]),
-                javascriptMode: JavascriptMode.unrestricted,
-                javascriptChannels: <JavascriptChannel>[
-                  JavascriptChannel(
-                    name: 'RecaptchaFlutterChannel',
-                    onMessageReceived: (JavascriptMessage receiver) {
-                      // print(receiver.message);
-                      String _token = receiver.message;
-                      widget.onResponse(_token);
-                      controller.hide();
-                    },
-                  ),
-                ].toSet(),
                 onWebViewCreated: (_controller) {
                   webViewController = _controller;
+                },
+                javascriptMode: JavascriptMode.unrestricted,
+                dartCallBacks: {
+                  DartCallback(
+                      name: "RecaptchaFlutterChannel",
+                      callBack: (receiver) {
+                        String _token = receiver.message;
+                        widget.onResponse(_token);
+                        controller.hide();
+                      })
                 },
               ),
               Align(
